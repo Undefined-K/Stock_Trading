@@ -21,3 +21,5 @@ if not os.path.exists('./data/market_stock_list.csv'):
 
     stock_list_df.to_csv('./data/market_stock_list.csv')
 
+
+
