@@ -10,8 +10,8 @@ import os
 width = 320
 pd.set_option('display.width', width)
 
-종목코드 = {'삼성전자' : '005930', '카카오' : '035720'}
-분석종목명 = '카카오'
+종목코드 = {'삼성전자' : '005930', '카카오' : '035720', '명신산업' : '009900'}
+분석종목명 = '삼성전자'
 
 if not os.path.exists('./data/' + 분석종목명 + '_ES.csv'):
     print("데이터 downloading..")
@@ -21,11 +21,11 @@ if not os.path.exists('./data/' + 분석종목명 + '_ES.csv'):
 
 df = pd.read_csv('./data/' + 분석종목명 + '_ES.csv')
 df['날짜'] = pd.to_datetime(df['날짜'])
-test_df = df.loc[(df['날짜'] >= '2018-08-01') & (df['날짜'] <= '2019-08-01')]
-df = df.loc[(df['날짜'] >= '2015-08-01') & (df['날짜'] <= '2018-08-01')]
+# test_df = df.loc[(df['날짜'] >= '2020-08-01') & (df['날짜'] <= '2021-08-01')]
+df = df.loc[(df['날짜'] >= '2020-01-01') & (df['날짜'] <= '2021-09-07')]
 df.reset_index(inplace=True,drop=True)
 print(분석종목명, df.shape)
-print((df.iloc[-1, 4] - df.iloc[0, 4]) / df.iloc[-1, 4])
+print((df.iloc[-1, 4] - df.iloc[0, 4]) / df.iloc[0, 4])
 
 
 class Deep_Evolution_Strategy:
@@ -87,10 +87,15 @@ class Model:
         self.weights = [
             np.random.randn(input_size, layer_size),
             np.random.randn(layer_size, output_size),
-            np.random.randn(1, layer_size),
+            np.random.randn(1, layer_size),  # Bias
         ]
 
     def predict(self, inputs):
+        """
+        Only feed-forward
+        :param inputs:
+        :return:
+        """
         feed = np.dot(inputs, self.weights[0]) + self.weights[-1]
         decision = np.dot(feed, self.weights[1])
         return decision
@@ -133,6 +138,8 @@ class Agent:
         res = []
         for i in range(window_size - 1):
             res.append(block[i + 1] - block[i])
+            #  print((block[i + 1] - block[i]) / block[i])
+            #  res.append(((block[i + 1] - block[i]) / block[i]) * 100)
         return np.array([res])
 
     def get_reward(self, weights):
@@ -144,6 +151,7 @@ class Agent:
         quantity = 0
         for t in range(0, len(self.trend) - 1, self.skip):
             action = self.act(state)
+            #  print(action)
             next_state = self.get_state(t + 1)
 
             if action == 1 and starting_money >= self.trend[t]:
@@ -213,7 +221,7 @@ agent = Agent(model = model,
               trend = close,
               skip = skip,
               initial_money = initial_money)
-agent.fit(iterations = 1000, checkpoint = 10)
+agent.fit(iterations = 700, checkpoint = 10)
 
 states_buy, states_sell, total_gains, invest = agent.buy()
 
@@ -224,19 +232,35 @@ plt.plot(close, 'v', markersize=10, color='k', label = 'selling signal', markeve
 plt.title('total gains %f, total investment %f%%'%(total_gains, invest))
 plt.legend()
 plt.show()
+
+plt.savefig('')
+
+
+'''
+plt.clf()
+plt.cla()
+plt.close()
 
 test_close = test_df.종가.values.tolist()
-agent.set_initial_money(10000000)
-agent.set_trend(test_close)
+
+print((test_close[-1] - test_close[0]) / test_close[0])
+
+agent_test = Agent(model = model,
+              window_size = window_size,
+              trend = test_close,
+              skip = skip,
+              initial_money = 10000000)
+
 # test_close = test_df.종가.values.tolist()
 # agent.set_trend(test_close)
-states_buy, states_sell, total_gains, invest = agent.buy()
+test_states_buy, test_states_sell, test_total_gains, test_invest = agent_test.buy()
 
 fig = plt.figure(figsize = (15,5))
-plt.plot(close, color='r', lw=2.)
-plt.plot(close, '^', markersize=10, color='m', label = 'buying signal', markevery = states_buy)
-plt.plot(close, 'v', markersize=10, color='k', label = 'selling signal', markevery = states_sell)
-plt.title('total gains %f, total investment %f%%'%(total_gains, invest))
+plt.plot(test_close, color='r', lw=2.)
+plt.plot(test_close, '^', markersize=10, color='m', label = 'buying signal', markevery = test_states_buy)
+plt.plot(test_close, 'v', markersize=10, color='k', label = 'selling signal', markevery = test_states_sell)
+plt.title('total gains %f, total investment %f%%'%(test_total_gains, test_invest))
 plt.legend()
 plt.show()
 
+'''
